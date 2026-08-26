@@ -6,7 +6,7 @@ settings:
 
 overrides:
   tar: 7.5.21
-  tmp: 0.2.6
+  tmp: 0.2.7
 
 patchedDependencies:
   extract-zip@2.0.1:
@@ -2513,8 +2513,8 @@ packages:
     resolution: {integrity: sha512-GgouD1B+sWwvkaEq8vXC15DjQitxbvs12oIXELpconwm+Tg3zfcEv4jgzq3vtKverDXsg3VI8aRgNL2Nra0Iog==}
     hasBin: true
 
-  tmp@0.2.6:
-    resolution: {integrity: sha512-5sJPdPjfI5Kx+qbrDesxkglRBxW//g7hCsqspEjwkewGvBMGIKMOTKzLt1hFVJzyadba3lDUN20O9qhvbQUSTA==}
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
     engines: {node: '>=14.14'}
 
   tn1150@0.1.0:
@@ -4215,7 +4215,7 @@ snapshots:
     dependencies:
       chardet: 0.7.0
       iconv-lite: 0.4.24
-      tmp: 0.2.6
+      tmp: 0.2.7
 
   extract-zip@2.0.1(patch_hash=9cd5c4f4488ef80b4a78263c87f4ef7296aca97ec7bf91a3c7651b908095064e):
     dependencies:
@@ -5401,7 +5401,7 @@ snapshots:
     dependencies:
       tldts-core: 7.4.10
 
-  tmp@0.2.6: {}
+  tmp@0.2.7: {}
 
   tn1150@0.1.0:
     dependencies:
