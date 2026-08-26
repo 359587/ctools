@@ -61,6 +61,8 @@ CTools 默认读取 `$CODEX_HOME/config.toml`；未设置 `CODEX_HOME` 时读取
 
 ```bash
 pnpm check     # TypeScript + Vitest
+pnpm audit:deps # 已知漏洞审计（唯一忽略项由项目补丁覆盖）
+pnpm test:security # 验证归档解压安全补丁
 pnpm package   # 生成未封装的 .app
 pnpm make      # 生成 .app、DMG 和 ZIP
 ```

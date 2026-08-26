@@ -14,13 +14,6 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-dmg',
-      config: {
-        format: 'ULFO',
-        name: 'CTools',
-      },
-    },
-    {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin'],
       config: {},

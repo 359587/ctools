@@ -42,5 +42,11 @@ jobs:
       - name: Type-check and test
         run: pnpm check
 
+      - name: Audit dependencies
+        run: pnpm audit:deps
+
+      - name: Verify archive security patch
+        run: pnpm test:security
+
       - name: Package macOS app
         run: pnpm package

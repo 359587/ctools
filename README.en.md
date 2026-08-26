@@ -48,6 +48,8 @@ CTools reads `$CODEX_HOME/config.toml`, falling back to `~/.codex/config.toml`. 
 
 ```bash
 pnpm check
+pnpm audit:deps
+pnpm test:security
 pnpm package
 pnpm make
 ```

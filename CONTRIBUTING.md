@@ -42,6 +42,8 @@ CODEX_HOME="$PWD/tests/fixtures/codex-home" pnpm start
 
 ```bash
 pnpm check
+pnpm audit:deps
+pnpm test:security
 pnpm package
 ```
 

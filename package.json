@@ -27,10 +27,13 @@
     "build:native": "node scripts/build-native-helper.mjs",
     "start": "pnpm build:native && electron-forge start",
     "package": "pnpm build:native && electron-forge package",
-    "make": "pnpm build:native && electron-forge make",
+    "make": "pnpm build:native && electron-forge make && pnpm make:dmg",
+    "make:dmg": "node scripts/make-dmg.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:security": "node scripts/test-extract-zip-patch.mjs",
+    "audit:deps": "pnpm audit --ignore CVE-2026-56876",
     "check": "pnpm typecheck && pnpm test",
     "restore:latest": "pnpm build:native && electron-forge start -- --restore-latest"
   },
@@ -45,14 +48,21 @@
     "node": ">=22"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "fs-xattr",
-      "macos-alias"
-    ]
+    "overrides": {
+      "tar": "7.5.21",
+      "tmp": "0.2.6"
+    },
+    "patchedDependencies": {
+      "extract-zip@2.0.1": "patches/extract-zip@2.0.1.patch"
+    },
+    "auditConfig": {
+      "ignoreCves": [
+        "CVE-2026-56876"
+      ]
+    }
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
-    "@electron-forge/maker-dmg": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
     "@electron-forge/plugin-vite": "^7.11.2",
     "@electron-forge/shared-types": "^7.11.2",
