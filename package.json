@@ -1,0 +1,72 @@
+{
+  "name": "ctools",
+  "productName": "CTools",
+  "version": "0.1.1",
+  "description": "A safe Codex desktop provider switcher for macOS",
+  "license": "MIT",
+  "author": "NoTokenCoder",
+  "homepage": "https://github.com/359587/ctools#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/359587/ctools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/359587/ctools/issues"
+  },
+  "keywords": [
+    "codex",
+    "electron",
+    "macos",
+    "openai",
+    "provider-switcher"
+  ],
+  "main": ".vite/build/main.js",
+  "private": true,
+  "packageManager": "pnpm@10.31.0",
+  "scripts": {
+    "build:native": "node scripts/build-native-helper.mjs",
+    "start": "pnpm build:native && electron-forge start",
+    "package": "pnpm build:native && electron-forge package",
+    "make": "pnpm build:native && electron-forge make",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm typecheck && pnpm test",
+    "restore:latest": "pnpm build:native && electron-forge start -- --restore-latest"
+  },
+  "dependencies": {
+    "lucide-react": "^1.33.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "smol-toml": "^1.8.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "fs-xattr",
+      "macos-alias"
+    ]
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-dmg": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-vite": "^7.11.2",
+    "@electron-forge/shared-types": "^7.11.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "electron": "^43.4.1",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

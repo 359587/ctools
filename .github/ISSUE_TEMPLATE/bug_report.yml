@@ -1,0 +1,57 @@
+name: Bug report / 缺陷报告
+description: Report a reproducible CTools problem without including credentials.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Remove API keys, tokens, `auth.json` contents, real provider URLs, and personal paths before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: CTools version or commit
+      placeholder: v0.1.1 or a commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: macOS version, Mac architecture, Node.js version, Codex version
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use an example provider URL and test data only.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Redacted logs or screenshots only. Do not attach configuration or Keychain exports.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, private endpoints, account data, and personal paths.
+          required: true
+        - label: This is not an undisclosed security vulnerability.
+          required: true

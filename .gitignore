@@ -1,0 +1,24 @@
+!.gitignore
+!pnpm-lock.yaml
+
+node_modules/
+.vite/
+src/.vite/
+out/
+dist/
+coverage/
+resources/bin/ctools-macos-helper
+*.log
+.DS_Store
+.tmp/
+.impeccable/
+tests/fixtures/**/tmp/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Local screenshots that contain a workstation path
+artifacts/ctools-ui.png
+artifacts/ctools-ui-prod.png
