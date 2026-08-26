@@ -9,7 +9,7 @@ CTools is a macOS utility for safely switching Codex between ChatGPT login mode 
 
 ![CTools provider screen](artifacts/current-api-restart-action.png)
 
-> The public project is currently distributed as source. No Apple-notarized binary is provided yet.
+> The v0.1.1 GitHub Release is source-only. CTools is not Apple-notarized yet; macOS may report a self-built or trusted test build as “damaged” and offer to move it to the Trash. See the installation notes below.
 
 ## Why CTools
 
@@ -25,15 +25,17 @@ Editing `~/.codex/config.toml` by hand can introduce typos, leak credentials, or
 - Recovery from the dashboard, history, native menu, or `Shift + Command + R`.
 - A shared test-model setting enriched with models discovered from providers.
 
-## Requirements
+## Installation
+
+### Option 1: Run from source
+
+Requirements:
 
 - macOS
 - Node.js 22 or later
 - pnpm 10
 - Xcode Command Line Tools (`xcrun swiftc` is used for the native helper)
 - Codex Desktop or an executable Codex CLI
-
-## Run from source
 
 ```bash
 git clone --branch main --single-branch https://github.com/359587/ctools.git
@@ -43,6 +45,41 @@ pnpm start
 ```
 
 CTools reads `$CODEX_HOME/config.toml`, falling back to `~/.codex/config.toml`. Always use an isolated `CODEX_HOME` for development and tests. Never add a real configuration or credential to a fixture.
+
+### Option 2: Build and install the macOS app
+
+After installing the dependencies above, run:
+
+```bash
+pnpm make
+```
+
+Open `out/make/CTools.dmg`, drag `CTools.app` into Applications, and launch `/Applications/CTools.app`.
+
+#### macOS says the app is “damaged” or should be moved to the Trash
+
+Gatekeeper can show this message because the current build is not notarized with an Apple Developer ID. Continue only if the app came from this repository or you built it yourself from this repository:
+
+```bash
+codesign --verify --deep --strict --verbose=2 "/Applications/CTools.app"
+sudo xattr -rd com.apple.quarantine "/Applications/CTools.app"
+open "/Applications/CTools.app"
+```
+
+The first command must succeed. If signature verification fails, delete the app and download or build it again. Do not re-sign it with `codesign --force --deep --sign -`, because changing the app identity can affect Keychain access. `xattr` only removes the macOS download quarantine attribute; it does not repair a damaged file or an invalid signature.
+
+If macOS only says that the developer cannot be verified, Control-click `CTools.app` in Finder and select Open, or allow it under System Settings → Privacy & Security.
+
+## Usage
+
+1. Install Codex Desktop, complete ChatGPT sign-in at least once, and make sure Codex is in login mode before launching CTools. On first launch, CTools reads the current configuration and captures a recovery baseline.
+2. Confirm the default test model under System Settings. It is used for connection checks and the initial model after switching; it does not prevent choosing another model later in Codex.
+3. Open API Providers, select Add Provider, choose a preset or custom provider, and enter its display name, Base URL, and API key.
+4. Run Test Connection first. After it succeeds, select Save Only or Save and Switch. Codex exits and restarts automatically during a switch.
+5. To return to ChatGPT login mode, select Switch Back to Login Mode on the dashboard.
+6. If a provider or configuration fails, restore the pre-switch configuration from One-click Restore, Switch History, the application menu, or `Shift + Command + R`.
+
+API keys stay in macOS Keychain. Do not force-quit CTools during a switch. If an operation is interrupted, the next launch attempts to recover the unfinished transaction.
 
 ## Validate and build
 
