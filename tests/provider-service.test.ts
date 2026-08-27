@@ -50,4 +50,50 @@ describe('ProviderService provider test model', () => {
 
     expect(saved.testModel).toBe('provider-specific-model');
   });
+
+  it('adds the 9Routor cx prefix to the test request, saved model, and discovered models', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'gpt-5.4' }, { id: 'cx/gpt-5.6-sol' }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const helper = { getSecret: vi.fn().mockResolvedValue('secret-key') };
+    const service = new ProviderService(helper as unknown as NativeHelper);
+    const nineRoutorProfile = { ...profile, kind: '9routor' as const, testModel: 'gpt-5.4' };
+
+    const result = await service.test(nineRoutorProfile);
+    const state = { profiles: [nineRoutorProfile] } as unknown as PersistedState;
+    const saved = await service.save({
+      id: nineRoutorProfile.id,
+      kind: nineRoutorProfile.kind,
+      name: nineRoutorProfile.name,
+      baseUrl: nineRoutorProfile.baseUrl,
+      testModel: 'gpt-5.6-sol',
+    }, state);
+
+    expect(result.ok).toBe(true);
+    expect(result.availableModels).toEqual(['cx/gpt-5.4', 'cx/gpt-5.6-sol']);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string).model).toBe('cx/gpt-5.4');
+    expect(saved.testModel).toBe('cx/gpt-5.6-sol');
+  });
+
+  it('normalizes a 9Routor draft before testing', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const helper = { getSecret: vi.fn().mockResolvedValue('secret-key') };
+    const service = new ProviderService(helper as unknown as NativeHelper);
+
+    await service.testDraft({
+      kind: '9routor',
+      name: '9Routor',
+      baseUrl: 'https://api.example.com/v1',
+      testModel: 'gpt-5.4',
+      apiKey: 'secret-key',
+    }, { profiles: [] } as unknown as PersistedState);
+
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string).model).toBe('cx/gpt-5.4');
+  });
 });

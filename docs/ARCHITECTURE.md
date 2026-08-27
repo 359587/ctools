@@ -33,7 +33,7 @@ flowchart LR
 
 API 切换的关键顺序如下：
 
-1. 使用目标供应商和系统测试模型调用 `/responses`。
+1. 使用目标供应商自己的测试模型调用 `/responses`；9Routor 模型统一使用 `cx/` 前缀。
 2. 停止 Codex Desktop。
 3. 加密备份当前配置，并核对备份前后的 SHA-256，防止并发覆盖。
 4. 写入 journal 的 `prepared` 状态。

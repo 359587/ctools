@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { stat } from 'node:fs/promises';
-import { MAX_BACKUPS, MAX_HISTORY } from '../shared/constants';
+import { MAX_BACKUPS, MAX_HISTORY, normalizeTestModelForKind } from '../shared/constants';
 import { AppError, errorMessage } from '../shared/errors';
 import type {
   AppMode,
@@ -144,6 +144,7 @@ export class AppController {
   async testProvider(id: string): Promise<TestProviderResult> {
     const state = this.store.get();
     const profile = requireProfile(state, id);
+    profile.testModel = normalizeTestModelForKind(profile.kind, profile.testModel);
     const result = await this.providers.test(profile);
     profile.lastTestedAt = new Date().toISOString();
     profile.lastTestOk = result.ok;
@@ -162,6 +163,7 @@ export class AppController {
     return this.operation(async () => {
       const state = this.store.get();
       const profile = requireProfile(state, id);
+      profile.testModel = normalizeTestModelForKind(profile.kind, profile.testModel);
       const test = await this.providers.test(profile);
       profile.lastTestedAt = new Date().toISOString();
       profile.lastTestOk = test.ok;

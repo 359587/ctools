@@ -73,7 +73,7 @@ If macOS only says that the developer cannot be verified, Control-click `CTools.
 ## Usage
 
 1. Install Codex Desktop, complete ChatGPT sign-in at least once, and make sure Codex is in login mode before launching CTools. On first launch, CTools reads the current configuration and captures a recovery baseline.
-2. Open API Providers, select Add Provider, choose a preset or custom provider, and enter its display name, Base URL, test model, and API key. A model is prefilled for the provider type; you can also choose a model returned by the provider or enter a custom model ID.
+2. Open API Providers, select Add Provider, choose a preset or custom provider, and enter its display name, Base URL, test model, and API key. A model is prefilled for the provider type; you can also choose a model returned by the provider or enter a custom model ID. 9Routor models automatically use the `cx/` prefix.
 3. Run Test Connection first. After it succeeds, select Save Only or Save and Switch. Codex exits and restarts automatically during a switch.
 4. To return to ChatGPT login mode, select Switch Back to Login Mode on the dashboard.
 5. If a provider or configuration fails, restore the pre-switch configuration from One-click Restore, Switch History, the application menu, or `Shift + Command + R`.

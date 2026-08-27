@@ -30,6 +30,7 @@ describe('StateStore provider test-model migration', () => {
       profiles: [
         baseProfile,
         { ...baseProfile, id: 'a3a8b9f1-9a16-4c71-8b92-2f1de80c7ee9', kind: 'sub2api', name: 'Sub2API' },
+        { ...baseProfile, id: '0fa3f5c3-a25a-4c2e-8e45-3f0a2f4f1d8b', kind: '9routor', name: '9Routor' },
       ],
       backups: [],
       history: [],
@@ -40,6 +41,7 @@ describe('StateStore provider test-model migration', () => {
     expect(state.profiles.map((profile) => profile.testModel)).toEqual([
       'legacy-global-model',
       'legacy-global-model',
+      'cx/legacy-global-model',
     ]);
     expect(state).not.toHaveProperty('settings');
     const saved = JSON.parse(await readFile(stateFile, 'utf8'));
@@ -59,5 +61,32 @@ describe('StateStore provider test-model migration', () => {
     const state = await new StateStore(stateFile).load();
 
     expect(state.profiles[0].testModel).toBe('legacy-provider-model');
+  });
+
+  it('migrates model prefixes to match each provider kind', async () => {
+    const stateFile = await createStateFile({
+      schemaVersion: 1,
+      profiles: [
+        { ...baseProfile, testModel: 'gpt-5.4' },
+        { ...baseProfile, id: '0fa3f5c3-a25a-4c2e-8e45-3f0a2f4f1d8b', kind: '9routor', testModel: 'gpt-5.4' },
+        { ...baseProfile, id: 'e1486603-6a98-44f5-bcd5-9cb4ae9e4240', kind: 'sub2api', testModel: 'cx/provider-model' },
+      ],
+      backups: [],
+      history: [],
+    });
+
+    const state = await new StateStore(stateFile).load();
+
+    expect(state.profiles.map((profile) => profile.testModel)).toEqual([
+      'gpt-5.4',
+      'cx/gpt-5.4',
+      'provider-model',
+    ]);
+    const saved = JSON.parse(await readFile(stateFile, 'utf8'));
+    expect(saved.profiles.map((profile: { testModel: string }) => profile.testModel)).toEqual([
+      'gpt-5.4',
+      'cx/gpt-5.4',
+      'provider-model',
+    ]);
   });
 });

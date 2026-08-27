@@ -23,7 +23,11 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { defaultTestModelForKind, TEST_MODEL_PRESETS } from '../shared/constants';
+import {
+  defaultTestModelForKind,
+  normalizeTestModelForKind,
+  TEST_MODEL_PRESETS,
+} from '../shared/constants';
 import type {
   AppSnapshot,
   OperationResult,
@@ -344,19 +348,23 @@ function ProviderEditor(props: {
   const [test, setTest] = useState<TestProviderResult>();
   const [discoveredModels, setDiscoveredModels] = useState<string[]>([]);
   const modelOptions = useMemo(
-    () => [...new Set([...TEST_MODEL_PRESETS, ...(props.availableModels ?? []), ...discoveredModels])],
-    [discoveredModels, props.availableModels],
+    () => [...new Set(
+      [...TEST_MODEL_PRESETS, ...(props.availableModels ?? []), ...discoveredModels]
+        .map((model) => normalizeTestModelForKind(props.draft.kind, model)),
+    )],
+    [discoveredModels, props.availableModels, props.draft.kind],
   );
-  const isKnownModel = modelOptions.includes(props.draft.testModel);
+  const currentModel = normalizeTestModelForKind(props.draft.kind, props.draft.testModel);
+  const isKnownModel = modelOptions.includes(currentModel);
   const set = (field: keyof ProviderDraft, value: string) => props.setDraft({ ...props.draft, [field]: value });
   const selectKind = (kind: ProviderKind) => {
     const currentDefault = kindLabels[props.draft.kind];
-    const shouldUseDefaultModel = !props.draft.testModel.trim() || props.draft.testModel === defaultTestModelForKind(props.draft.kind);
     props.setDraft({
       ...props.draft,
       kind,
       name: !props.draft.name || props.draft.name === currentDefault ? kindLabels[kind] : props.draft.name,
-      testModel: shouldUseDefaultModel ? defaultTestModelForKind(kind) : props.draft.testModel,
+      testModel: normalizeTestModelForKind(kind, props.draft.testModel)
+        || defaultTestModelForKind(kind),
     });
   };
   const doTest = async () => {
@@ -381,7 +389,7 @@ function ProviderEditor(props: {
         </div>
         <div className="form-grid">
           <label><span>显示名称</span><input value={props.draft.name} onChange={(event) => set('name', event.target.value)} placeholder="例如：公司 Sub2API" /></label>
-          <label className="wide model-field"><span>测试模型</span><select value={isKnownModel ? props.draft.testModel : '__custom__'} onChange={(event) => set('testModel', event.target.value === '__custom__' ? '' : event.target.value)}>{modelOptions.map((model) => <option value={model} key={model}>{model}</option>)}<option value="__custom__">自定义模型…</option></select>{!isKnownModel ? <input value={props.draft.testModel} onChange={(event) => set('testModel', event.target.value)} placeholder="输入供应商返回的准确模型 ID" spellCheck={false} autoFocus /> : null}<small>按供应商单独保存；默认值会按供应商类型预填，测试成功后可选择该供应商返回的模型。</small></label>
+          <label className="wide model-field"><span>测试模型</span><select value={isKnownModel ? currentModel : '__custom__'} onChange={(event) => set('testModel', event.target.value === '__custom__' ? '' : event.target.value)}>{modelOptions.map((model) => <option value={model} key={model}>{model}</option>)}<option value="__custom__">自定义模型…</option></select>{!isKnownModel ? <input value={props.draft.testModel} onChange={(event) => set('testModel', event.target.value)} placeholder="输入供应商返回的准确模型 ID" spellCheck={false} autoFocus /> : null}<small>按供应商单独保存；默认值会按供应商类型预填，9Routor 模型自动使用 cx/ 前缀。</small></label>
           <label className="wide"><span>API Base URL</span><div className="input-with-icon"><CloudCog size={16} /><input value={props.draft.baseUrl} onChange={(event) => set('baseUrl', event.target.value)} placeholder="https://example.com/v1" spellCheck={false} /></div><small>支持 HTTP 和 HTTPS，内网地址可直接使用 HTTP。</small></label>
           <label className="wide"><span>API Key</span><div className="input-with-icon"><KeyRound size={16} /><input type="password" value={props.draft.apiKey ?? ''} onChange={(event) => set('apiKey', event.target.value)} placeholder={props.draft.id ? '已安全保存；留空表示不更新' : '输入 API Key'} autoComplete="off" spellCheck={false} /></div><small>密钥写入 macOS 钥匙串，不进入配置历史和备份。</small></label>
         </div>

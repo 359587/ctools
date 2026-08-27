@@ -132,6 +132,21 @@ describe('AppController recovery transaction', () => {
     expect(store.get()).not.toHaveProperty('settings');
   });
 
+  it('normalizes a legacy 9Routor model before testing and switching', async () => {
+    const nineRoutorProfile = { ...profile, kind: '9routor' as const, testModel: 'gpt-5.4' };
+    const state = store.get();
+    state.profiles[0] = nineRoutorProfile;
+    await store.replace(state);
+
+    const switched = await controller.switchToProvider(nineRoutorProfile.id);
+
+    expect(switched.ok).toBe(true);
+    expect(providers.testedModels).toEqual(['cx/gpt-5.4']);
+    expect(await readFile(paths.codexConfig, 'utf8')).toContain('model = "cx/gpt-5.4"');
+    expect(store.get().profiles[0].testModel).toBe('cx/gpt-5.4');
+    expect(store.get().history[0].model).toBe('cx/gpt-5.4');
+  });
+
   it('switches from the active API provider back to login mode and restarts Codex', async () => {
     await controller.switchToProvider(profile.id);
     const switched = await controller.switchToLogin();

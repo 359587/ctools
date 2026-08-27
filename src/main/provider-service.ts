@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { KEYCHAIN_SERVICE } from '../shared/constants';
+import { KEYCHAIN_SERVICE, normalizeTestModelForKind } from '../shared/constants';
 import { AppError } from '../shared/errors';
 import { providerKinds } from '../shared/types';
 import type {
@@ -29,7 +29,7 @@ export class ProviderService {
   async save(draftInput: ProviderDraft, state: PersistedState): Promise<ProviderProfile> {
     const draft = draftSchema.parse(draftInput);
     const normalizedUrl = normalizeBaseUrl(draft.baseUrl);
-    const testModel = testModelSchema.parse(draft.testModel);
+    const testModel = testModelSchema.parse(normalizeTestModelForKind(draft.kind, draft.testModel));
     const existing = draft.id ? state.profiles.find((profile) => profile.id === draft.id) : undefined;
     if (draft.id && !existing) throw new AppError('供应商不存在', 'PROVIDER_NOT_FOUND');
     if (!existing && !draft.apiKey?.trim()) throw new AppError('首次保存必须填写 API Key', 'KEY_REQUIRED');
@@ -57,9 +57,9 @@ export class ProviderService {
   }
 
   async test(profile: ProviderProfile): Promise<TestProviderResult> {
-    const testModel = testModelSchema.parse(profile.testModel);
+    const testModel = testModelSchema.parse(normalizeTestModelForKind(profile.kind, profile.testModel));
     const key = await this.helper.getSecret(KEYCHAIN_SERVICE, profile.secretId);
-    return testEndpoint(profile.baseUrl, testModel, key);
+    return testEndpoint(profile.baseUrl, profile.kind, testModel, key);
   }
 
   async testDraft(
@@ -67,7 +67,7 @@ export class ProviderService {
     state: PersistedState,
   ): Promise<TestProviderResult> {
     const draft = draftSchema.parse(draftInput);
-    const testModel = testModelSchema.parse(draft.testModel);
+    const testModel = testModelSchema.parse(normalizeTestModelForKind(draft.kind, draft.testModel));
     const existing = draft.id ? state.profiles.find((profile) => profile.id === draft.id) : undefined;
     const key = draft.apiKey?.trim()
       ? draft.apiKey.trim()
@@ -75,11 +75,16 @@ export class ProviderService {
         ? await this.helper.getSecret(KEYCHAIN_SERVICE, existing.secretId)
         : '';
     if (!key) throw new AppError('请先填写 API Key', 'KEY_REQUIRED');
-    return testEndpoint(normalizeBaseUrl(draft.baseUrl), testModel, key);
+    return testEndpoint(normalizeBaseUrl(draft.baseUrl), draft.kind, testModel, key);
   }
 }
 
-async function testEndpoint(baseUrl: string, model: string, apiKey: string): Promise<TestProviderResult> {
+async function testEndpoint(
+  baseUrl: string,
+  kind: ProviderDraft['kind'],
+  model: string,
+  apiKey: string,
+): Promise<TestProviderResult> {
   const startedAt = performance.now();
   let availableModels: string[] | undefined;
   const headers = {
@@ -96,7 +101,7 @@ async function testEndpoint(baseUrl: string, model: string, apiKey: string): Pro
       return failure(startedAt, `鉴权失败（HTTP ${modelsResponse.status}）`);
     }
     if (modelsResponse.ok) {
-      availableModels = await readAvailableModels(modelsResponse);
+      availableModels = await readAvailableModels(modelsResponse, kind);
     }
 
     const response = await fetch(endpoint(baseUrl, 'responses'), {
@@ -125,13 +130,16 @@ async function testEndpoint(baseUrl: string, model: string, apiKey: string): Pro
   }
 }
 
-async function readAvailableModels(response: Response): Promise<string[] | undefined> {
+async function readAvailableModels(
+  response: Response,
+  kind: ProviderDraft['kind'],
+): Promise<string[] | undefined> {
   const body = await response.json().catch(() => undefined) as { data?: unknown } | undefined;
   if (!Array.isArray(body?.data)) return undefined;
   const models = body.data
     .map((item) => item && typeof item === 'object' && 'id' in item ? (item as { id?: unknown }).id : undefined)
     .filter((id): id is string => typeof id === 'string' && Boolean(id.trim()))
-    .map((id) => id.trim());
+    .map((id) => normalizeTestModelForKind(kind, id));
   return models.length ? [...new Set(models)].sort() : undefined;
 }
 

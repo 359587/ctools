@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { defaultTestModelForKind } from '../shared/constants';
+import { defaultTestModelForKind, normalizeTestModelForKind } from '../shared/constants';
 import type { PersistedState, ProviderProfile } from '../shared/types';
 import { atomicWriteFile } from './atomic-file';
 
@@ -30,16 +30,24 @@ export class StateStore {
       }
       const configuredModel = data.settings?.testModel?.trim();
       const needsMigration = Boolean(data.settings)
-        || data.profiles.some((profile) => !profile.testModel?.trim() || 'model' in profile);
+        || data.profiles.some((profile) => {
+          const rawModel = profile.testModel?.trim()
+            || profile.model?.trim()
+            || configuredModel
+            || defaultTestModelForKind(profile.kind);
+          return !profile.testModel?.trim()
+            || 'model' in profile
+            || normalizeTestModelForKind(profile.kind, rawModel) !== rawModel;
+        });
       const { settings: _legacySettings, ...stateWithoutSettings } = data;
       const migratedState: PersistedState = {
         ...stateWithoutSettings,
         profiles: data.profiles.map(({ model: legacyModel, ...profile }) => ({
           ...profile,
-          testModel: profile.testModel?.trim()
+          testModel: normalizeTestModelForKind(profile.kind, profile.testModel?.trim()
             || legacyModel?.trim()
             || configuredModel
-            || defaultTestModelForKind(profile.kind),
+            || defaultTestModelForKind(profile.kind)),
         })),
       };
       this.state = migratedState;
