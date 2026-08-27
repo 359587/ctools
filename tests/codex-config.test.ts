@@ -13,6 +13,7 @@ const profile: ProviderProfile = {
   kind: 'sub2api',
   name: '公司 Sub2API',
   baseUrl: 'https://gateway.example.com/v1/',
+  testModel: 'gpt-5.6-sol',
   secretId: '79d5920a-0a15-4cc4-b199-079dd3a3c34b',
   createdAt: '2026-08-23T00:00:00.000Z',
   updatedAt: '2026-08-23T00:00:00.000Z',
@@ -75,8 +76,9 @@ describe('Codex config patching', () => {
     ).toThrow(/已存在/);
   });
 
-  it('allows local HTTP and requires HTTPS for remote endpoints', () => {
+  it('allows HTTP for local and remote endpoints', () => {
     expect(normalizeBaseUrl('http://127.0.0.1:8317/v1/')).toBe('http://127.0.0.1:8317/v1');
-    expect(() => normalizeBaseUrl('http://api.example.com/v1')).toThrow(/HTTPS/);
+    expect(normalizeBaseUrl('http://10.10.10.3/v1/')).toBe('http://10.10.10.3/v1');
+    expect(normalizeBaseUrl('http://api.example.com/v1')).toBe('http://api.example.com/v1');
   });
 });

@@ -113,10 +113,6 @@ export function normalizeBaseUrl(value: string): string {
   if (!['https:', 'http:'].includes(url.protocol)) {
     throw new AppError('API URL 只支持 HTTP 或 HTTPS', 'INVALID_URL');
   }
-  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
-  if (url.protocol === 'http:' && !isLocal) {
-    throw new AppError('远程 API 必须使用 HTTPS；HTTP 仅允许本机地址', 'INSECURE_URL');
-  }
 
   url.hash = '';
   url.search = '';

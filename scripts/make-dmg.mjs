@@ -1,4 +1,4 @@
-import { access, cp, mkdir, mkdtemp, rm, symlink } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,10 +17,13 @@ const stagingDirectory = await mkdtemp(path.join(os.tmpdir(), 'ctools-dmg-'));
 try {
   await access(appPath);
   await mkdir(outputDirectory, { recursive: true });
-  await cp(appPath, path.join(stagingDirectory, 'CTools.app'), {
-    recursive: true,
-    preserveTimestamps: true,
-  });
+  execFileSync('/usr/bin/ditto', [
+    '--rsrc',
+    '--extattr',
+    '--acl',
+    appPath,
+    path.join(stagingDirectory, 'CTools.app'),
+  ], { stdio: 'inherit' });
   await symlink('/Applications', path.join(stagingDirectory, 'Applications'));
 
   execFileSync(

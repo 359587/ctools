@@ -18,10 +18,8 @@ const providerDraftSchema = z.object({
   kind: z.enum(providerKinds),
   name: z.string().max(80),
   baseUrl: z.string().max(2048),
-  apiKey: z.string().max(4096).optional(),
-});
-const settingsSchema = z.object({
   testModel: z.string().trim().min(1).max(160),
+  apiKey: z.string().max(4096).optional(),
 });
 
 let mainWindow: BrowserWindow | undefined;
@@ -105,10 +103,6 @@ function registerIpc(): void {
   ipcMain.handle('ctools:get-snapshot', async (event) => {
     assertTrustedSender(event);
     return controller.getSnapshot();
-  });
-  ipcMain.handle('ctools:update-settings', async (event, input) => {
-    assertTrustedSender(event);
-    return controller.updateSettings(settingsSchema.parse(input));
   });
   ipcMain.handle('ctools:save-provider', async (event, input) => {
     assertTrustedSender(event);

@@ -9,6 +9,7 @@ export interface ProviderProfile {
   kind: ProviderKind;
   name: string;
   baseUrl: string;
+  testModel: string;
   secretId: string;
   createdAt: string;
   updatedAt: string;
@@ -27,11 +28,8 @@ export interface ProviderDraft {
   kind: ProviderKind;
   name: string;
   baseUrl: string;
-  apiKey?: string;
-}
-
-export interface AppSettings {
   testModel: string;
+  apiKey?: string;
 }
 
 export interface LoginBaseline {
@@ -78,7 +76,6 @@ export interface RecoveryJournal {
 
 export interface PersistedState {
   schemaVersion: 1;
-  settings: AppSettings;
   loginBaseline?: LoginBaseline;
   profiles: ProviderProfile[];
   backups: BackupRecord[];
@@ -104,7 +101,6 @@ export interface CodexStatus {
 }
 
 export interface AppSnapshot {
-  settings: AppSettings;
   status: CodexStatus;
   profiles: PublicProviderProfile[];
   history: SwitchHistoryRecord[];
@@ -127,7 +123,6 @@ export interface TestProviderResult {
 
 export interface CToolsApi {
   getSnapshot(): Promise<AppSnapshot>;
-  updateSettings(settings: AppSettings): Promise<OperationResult>;
   saveProvider(draft: ProviderDraft): Promise<OperationResult>;
   deleteProvider(id: string): Promise<OperationResult>;
   testProvider(id: string): Promise<TestProviderResult>;

@@ -4,7 +4,6 @@ import { MAX_BACKUPS, MAX_HISTORY } from '../shared/constants';
 import { AppError, errorMessage } from '../shared/errors';
 import type {
   AppMode,
-  AppSettings,
   AppSnapshot,
   BackupRecord,
   OperationResult,
@@ -90,7 +89,6 @@ export class AppController {
     const recovery = selectRecoveryTarget(state);
 
     return {
-      settings: { ...state.settings },
       status: {
         mode: parsed.mode,
         model: parsed.model,
@@ -115,17 +113,6 @@ export class AppController {
       backups: state.backups,
       busy: this.busy,
     };
-  }
-
-  async updateSettings(settings: AppSettings): Promise<OperationResult> {
-    return this.operation(async () => {
-      const testModel = settings.testModel.trim();
-      if (!testModel) throw new AppError('测试模型不能为空', 'INVALID_MODEL');
-      const state = this.store.get();
-      state.settings = { testModel };
-      await this.store.replace(state);
-      return '默认测试模型已更新，将用于后续连接测试和 API 切换';
-    });
   }
 
   async saveProvider(draft: ProviderDraft): Promise<OperationResult> {
@@ -157,7 +144,7 @@ export class AppController {
   async testProvider(id: string): Promise<TestProviderResult> {
     const state = this.store.get();
     const profile = requireProfile(state, id);
-    const result = await this.providers.test(profile, state.settings.testModel);
+    const result = await this.providers.test(profile);
     profile.lastTestedAt = new Date().toISOString();
     profile.lastTestOk = result.ok;
     profile.lastTestMessage = result.message;
@@ -168,15 +155,14 @@ export class AppController {
 
   async testProviderDraft(draft: ProviderDraft): Promise<TestProviderResult> {
     const state = this.store.get();
-    return this.providers.testDraft(draft, state, state.settings.testModel);
+    return this.providers.testDraft(draft, state);
   }
 
   async switchToProvider(id: string): Promise<OperationResult> {
     return this.operation(async () => {
       const state = this.store.get();
       const profile = requireProfile(state, id);
-      const testModel = state.settings.testModel;
-      const test = await this.providers.test(profile, testModel);
+      const test = await this.providers.test(profile);
       profile.lastTestedAt = new Date().toISOString();
       profile.lastTestOk = test.ok;
       profile.lastTestMessage = test.message;
@@ -188,7 +174,7 @@ export class AppController {
         'switch-api',
         'api',
         profile,
-        (source) => applyProviderConfig(source, profile, testModel, this.helper.executablePath),
+        (source) => applyProviderConfig(source, profile, profile.testModel, this.helper.executablePath),
       );
     });
   }
@@ -348,7 +334,7 @@ export class AppController {
           toMode: targetMode,
           providerId: profile?.id,
           providerName: profile?.name,
-          model: targetMode === 'api' ? state.settings.testModel : undefined,
+          model: targetMode === 'api' ? profile?.testModel : undefined,
           status: 'success',
           backupId: backup.id,
           message: targetMode === 'api' ? `已切换到 ${profile?.name}` : '已切回 Codex 登录模式',
@@ -371,7 +357,7 @@ export class AppController {
           toMode: current.mode,
           providerId: profile?.id,
           providerName: profile?.name,
-          model: targetMode === 'api' ? state.settings.testModel : undefined,
+          model: targetMode === 'api' ? profile?.testModel : undefined,
           status: backup ? 'recovered' : 'failed',
           backupId: backup?.id,
           message: `切换失败，原配置已还原：${errorMessage(error)}`,

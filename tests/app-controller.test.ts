@@ -16,6 +16,7 @@ const profile: ProviderProfile = {
   kind: 'cockpit',
   name: 'Cockpit',
   baseUrl: 'https://api.example.com/v1',
+  testModel: 'gpt-5.6-sol',
   secretId: 'c4cda87b-e96c-48f5-a5fb-8455920dc4ad',
   createdAt: '2026-08-23T00:00:00.000Z',
   updatedAt: '2026-08-23T00:00:00.000Z',
@@ -45,8 +46,8 @@ class FakeCodex {
 
 class FakeProviders {
   testedModels: string[] = [];
-  async test(_profile: ProviderProfile, model: string) {
-    this.testedModels.push(model);
+  async test(profile: ProviderProfile) {
+    this.testedModels.push(profile.testModel);
     return { ok: true, message: 'ok', latencyMs: 1 };
   }
 }
@@ -118,16 +119,17 @@ describe('AppController recovery transaction', () => {
     expect(store.get().activeProviderId).toBeUndefined();
   });
 
-  it('uses the system test model for future tests and switches without rewriting immediately', async () => {
-    const updated = await controller.updateSettings({ testModel: 'gpt-5.4' });
-    expect(updated.ok).toBe(true);
-    expect(await readFile(paths.codexConfig, 'utf8')).toBe(original);
+  it('uses each provider model for tests and switches without rewriting immediately', async () => {
+    const state = store.get();
+    state.profiles[0].testModel = 'gpt-5.4';
+    await store.replace(state);
 
     const switched = await controller.switchToProvider(profile.id);
     expect(switched.ok).toBe(true);
     expect(await readFile(paths.codexConfig, 'utf8')).toContain('model = "gpt-5.4"');
     expect(providers.testedModels).toEqual(['gpt-5.4']);
     expect(store.get().history[0].model).toBe('gpt-5.4');
+    expect(store.get()).not.toHaveProperty('settings');
   });
 
   it('switches from the active API provider back to login mode and restarts Codex', async () => {

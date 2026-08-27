@@ -17,14 +17,13 @@ import {
   RefreshCcw,
   RotateCcw,
   ServerCog,
-  Settings2,
   ShieldCheck,
   Trash2,
   Wifi,
   X,
   Zap,
 } from 'lucide-react';
-import { TEST_MODEL_PRESETS } from '../shared/constants';
+import { defaultTestModelForKind, TEST_MODEL_PRESETS } from '../shared/constants';
 import type {
   AppSnapshot,
   OperationResult,
@@ -34,7 +33,7 @@ import type {
   TestProviderResult,
 } from '../shared/types';
 
-type View = 'overview' | 'providers' | 'history' | 'settings';
+type View = 'overview' | 'providers' | 'history';
 type Toast = { tone: 'success' | 'error' | 'info'; message: string };
 
 const kindLabels: Record<ProviderKind, string> = {
@@ -45,12 +44,17 @@ const kindLabels: Record<ProviderKind, string> = {
   custom: '自定义',
 };
 
-const emptyDraft: ProviderDraft = {
-  kind: 'cockpit',
-  name: 'Cockpit',
-  baseUrl: '',
-  apiKey: '',
-};
+function newProviderDraft(kind: ProviderKind): ProviderDraft {
+  return {
+    kind,
+    name: kindLabels[kind],
+    baseUrl: '',
+    testModel: defaultTestModelForKind(kind),
+    apiKey: '',
+  };
+}
+
+const emptyDraft = newProviderDraft('cockpit');
 
 export function App() {
   const [snapshot, setSnapshot] = useState<AppSnapshot>();
@@ -59,7 +63,6 @@ export function App() {
   const [action, setAction] = useState<string>();
   const [toast, setToast] = useState<Toast>();
   const [editor, setEditor] = useState<ProviderDraft>();
-  const [suspendedEditor, setSuspendedEditor] = useState<ProviderDraft>();
 
   const refresh = useCallback(async () => {
     const next = await window.ctools.getSnapshot();
@@ -125,7 +128,6 @@ export function App() {
           <NavButton icon={<LayoutDashboard size={18} />} active={view === 'overview'} onClick={() => setView('overview')}>总览</NavButton>
           <NavButton icon={<ServerCog size={18} />} active={view === 'providers'} onClick={() => setView('providers')}>API 供应商</NavButton>
           <NavButton icon={<History size={18} />} active={view === 'history'} onClick={() => setView('history')}>切换记录</NavButton>
-          <NavButton icon={<Settings2 size={18} />} active={view === 'settings'} onClick={() => setView('settings')}>系统设置</NavButton>
         </nav>
 
         <div className="sidebar-bottom">
@@ -148,16 +150,15 @@ export function App() {
             onSwitchApi={(id) => void runOperation(`switch-${id}`, () => window.ctools.switchToProvider(id))}
             onSwitchLogin={() => void runOperation('switch-login', window.ctools.switchToLogin)}
             onRestore={() => void runOperation('restore-latest', window.ctools.restoreLatest)}
-            onAdd={() => { setSuspendedEditor(undefined); setEditor({ ...emptyDraft }); setView('providers'); }}
+            onAdd={() => { setEditor({ ...emptyDraft }); setView('providers'); }}
           />
         )}
         {view === 'providers' && (
           <Providers
             snapshot={snapshot}
             action={action}
-            onAdd={() => { setSuspendedEditor(undefined); setEditor({ ...emptyDraft }); }}
+            onAdd={() => setEditor({ ...emptyDraft })}
             onEdit={(profile) => setEditor(profileToDraft(profile))}
-            onSettings={() => setView('settings')}
             onDelete={(id) => void runOperation(`delete-${id}`, () => window.ctools.deleteProvider(id))}
             onTest={async (id) => {
               setAction(`test-${id}`);
@@ -173,19 +174,6 @@ export function App() {
         {view === 'history' && (
           <HistoryView snapshot={snapshot} action={action} onRestore={(id) => void runOperation(`restore-${id}`, () => window.ctools.restoreBackup(id))} />
         )}
-        {view === 'settings' && (
-          <SettingsView
-            snapshot={snapshot}
-            action={action}
-            hasSuspendedEditor={Boolean(suspendedEditor)}
-            onSave={(testModel) => runOperation('save-settings', () => window.ctools.updateSettings({ testModel }))}
-            onReturnToProvider={() => {
-              setView('providers');
-              if (suspendedEditor) setEditor(suspendedEditor);
-              setSuspendedEditor(undefined);
-            }}
-          />
-        )}
       </main>
 
       {editor && (
@@ -195,12 +183,7 @@ export function App() {
           action={action}
           onClose={() => setEditor(undefined)}
           onToast={setToast}
-          testModel={snapshot.settings.testModel}
-          onOpenSettings={(draft) => {
-            setSuspendedEditor(draft);
-            setEditor(undefined);
-            setView('settings');
-          }}
+          availableModels={editor.id ? snapshot.profiles.find((profile) => profile.id === editor.id)?.availableModels : undefined}
           onSave={async (draft, shouldSwitch) => {
             const result = await runOperation('save-provider', () => window.ctools.saveProvider(draft));
             if (!result?.ok) return;
@@ -266,7 +249,7 @@ function Overview(props: {
               ))}
             </div>
           ) : (
-            <button className="primary-action" onClick={props.onAdd}><Plus size={20} /><span><strong>添加第一个 API</strong><small>填写 URL 和 Key，测试模型由系统设置统一管理</small></span><ChevronRight size={19} /></button>
+            <button className="primary-action" onClick={props.onAdd}><Plus size={20} /><span><strong>添加第一个 API</strong><small>填写 URL、测试模型和 Key，供应商之间互不影响</small></span><ChevronRight size={19} /></button>
           )}
         </section>
 
@@ -288,7 +271,6 @@ function Providers(props: {
   action?: string;
   onAdd(): void;
   onEdit(profile: PublicProviderProfile): void;
-  onSettings(): void;
   onDelete(id: string): void;
   onTest(id: string): void;
   onSwitch(id: string): void;
@@ -296,8 +278,8 @@ function Providers(props: {
   return (
     <section className="page">
       <header className="page-header compact">
-        <div><p className="eyebrow">PROVIDER RACK</p><h1>API 供应商</h1><p>密钥只保存在 macOS 钥匙串；连接测试统一使用系统测试模型。</p></div>
-        <div className="header-actions"><button className="settings-button" onClick={props.onSettings}><Settings2 size={16} />测试模型</button><button className="add-button" onClick={props.onAdd}><Plus size={17} />添加供应商</button></div>
+        <div><p className="eyebrow">PROVIDER RACK</p><h1>API 供应商</h1><p>密钥只保存在 macOS 钥匙串；每个供应商可以使用独立的测试模型。</p></div>
+        <div className="header-actions"><button className="add-button" onClick={props.onAdd}><Plus size={17} />添加供应商</button></div>
       </header>
 
       {props.snapshot.profiles.length === 0 ? (
@@ -310,7 +292,7 @@ function Providers(props: {
               <article className={`provider-card ${active ? 'active' : ''}`} key={profile.id}>
                 <div className="card-top"><span className="slot">SLOT {String(index + 1).padStart(2, '0')}</span>{active && <span className="active-flag"><span />运行中</span>}</div>
                 <div className="provider-title"><ProviderGlyph kind={profile.kind} /><div><h2>{profile.name}</h2><span>{kindLabels[profile.kind]}</span></div></div>
-                <dl><div><dt>TEST MODEL</dt><dd title="系统设置中的默认测试模型">{props.snapshot.settings.testModel}</dd></div><div><dt>ENDPOINT</dt><dd title={profile.baseUrl}>{safeHost(profile.baseUrl)}</dd></div><div><dt>KEY</dt><dd>•••••••••••• <ShieldCheck size={13} /></dd></div></dl>
+                <dl><div><dt>TEST MODEL</dt><dd title="该供应商的测试模型">{profile.testModel}</dd></div><div><dt>ENDPOINT</dt><dd title={profile.baseUrl}>{safeHost(profile.baseUrl)}</dd></div><div><dt>KEY</dt><dd>•••••••••••• <ShieldCheck size={13} /></dd></div></dl>
                 <div className={`test-state ${profile.lastTestOk === false ? 'bad' : ''}`}><Wifi size={14} /><span>{profile.lastTestMessage ?? '尚未测试连接'}</span>{profile.lastTestedAt && <time>{relativeTime(profile.lastTestedAt)}</time>}</div>
                 <div className={`card-actions ${active ? 'active-actions' : ''}`}>
                   <button onClick={() => props.onTest(profile.id)} disabled={Boolean(props.action)}>{props.action === `test-${profile.id}` ? <LoaderCircle className="spin" size={15} /> : <Activity size={15} />}测试</button>
@@ -355,28 +337,40 @@ function ProviderEditor(props: {
   action?: string;
   onClose(): void;
   onToast(toast: Toast): void;
-  testModel: string;
-  onOpenSettings(draft: ProviderDraft): void;
+  availableModels?: string[];
   onSave(draft: ProviderDraft, shouldSwitch: boolean): Promise<void>;
 }) {
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<TestProviderResult>();
+  const [discoveredModels, setDiscoveredModels] = useState<string[]>([]);
+  const modelOptions = useMemo(
+    () => [...new Set([...TEST_MODEL_PRESETS, ...(props.availableModels ?? []), ...discoveredModels])],
+    [discoveredModels, props.availableModels],
+  );
+  const isKnownModel = modelOptions.includes(props.draft.testModel);
   const set = (field: keyof ProviderDraft, value: string) => props.setDraft({ ...props.draft, [field]: value });
   const selectKind = (kind: ProviderKind) => {
     const currentDefault = kindLabels[props.draft.kind];
-    props.setDraft({ ...props.draft, kind, name: !props.draft.name || props.draft.name === currentDefault ? kindLabels[kind] : props.draft.name });
+    const shouldUseDefaultModel = !props.draft.testModel.trim() || props.draft.testModel === defaultTestModelForKind(props.draft.kind);
+    props.setDraft({
+      ...props.draft,
+      kind,
+      name: !props.draft.name || props.draft.name === currentDefault ? kindLabels[kind] : props.draft.name,
+      testModel: shouldUseDefaultModel ? defaultTestModelForKind(kind) : props.draft.testModel,
+    });
   };
   const doTest = async () => {
     setTesting(true);
     try {
       const result = await window.ctools.testProviderDraft(props.draft);
       setTest(result);
+      if (result.availableModels?.length) setDiscoveredModels(result.availableModels);
       props.onToast({ tone: result.ok ? 'success' : 'error', message: `${result.message} · ${result.latencyMs}ms` });
     } catch (error) {
       props.onToast({ tone: 'error', message: error instanceof Error ? error.message : String(error) });
     } finally { setTesting(false); }
   };
-  const valid = props.draft.name.trim() && props.draft.baseUrl.trim() && (props.draft.id || props.draft.apiKey?.trim());
+  const valid = props.draft.name.trim() && props.draft.baseUrl.trim() && props.draft.testModel.trim() && (props.draft.id || props.draft.apiKey?.trim());
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onClose(); }}>
@@ -387,8 +381,8 @@ function ProviderEditor(props: {
         </div>
         <div className="form-grid">
           <label><span>显示名称</span><input value={props.draft.name} onChange={(event) => set('name', event.target.value)} placeholder="例如：公司 Sub2API" /></label>
-          <div className="model-preview-field"><span>默认测试模型</span><div className="model-preview"><code>{props.testModel}</code><button type="button" onClick={() => props.onOpenSettings(props.draft)}><Settings2 size={14} />去设置</button></div><small>测试和切换默认使用此模型；进入 Codex 后仍可选择供应商支持的其他模型。</small></div>
-          <label className="wide"><span>API Base URL</span><div className="input-with-icon"><CloudCog size={16} /><input value={props.draft.baseUrl} onChange={(event) => set('baseUrl', event.target.value)} placeholder="https://example.com/v1" spellCheck={false} /></div><small>远程地址必须使用 HTTPS，本机可使用 HTTP。</small></label>
+          <label className="wide model-field"><span>测试模型</span><select value={isKnownModel ? props.draft.testModel : '__custom__'} onChange={(event) => set('testModel', event.target.value === '__custom__' ? '' : event.target.value)}>{modelOptions.map((model) => <option value={model} key={model}>{model}</option>)}<option value="__custom__">自定义模型…</option></select>{!isKnownModel ? <input value={props.draft.testModel} onChange={(event) => set('testModel', event.target.value)} placeholder="输入供应商返回的准确模型 ID" spellCheck={false} autoFocus /> : null}<small>按供应商单独保存；默认值会按供应商类型预填，测试成功后可选择该供应商返回的模型。</small></label>
+          <label className="wide"><span>API Base URL</span><div className="input-with-icon"><CloudCog size={16} /><input value={props.draft.baseUrl} onChange={(event) => set('baseUrl', event.target.value)} placeholder="https://example.com/v1" spellCheck={false} /></div><small>支持 HTTP 和 HTTPS，内网地址可直接使用 HTTP。</small></label>
           <label className="wide"><span>API Key</span><div className="input-with-icon"><KeyRound size={16} /><input type="password" value={props.draft.apiKey ?? ''} onChange={(event) => set('apiKey', event.target.value)} placeholder={props.draft.id ? '已安全保存；留空表示不更新' : '输入 API Key'} autoComplete="off" spellCheck={false} /></div><small>密钥写入 macOS 钥匙串，不进入配置历史和备份。</small></label>
         </div>
         {test && <div className={`inline-test ${test.ok ? 'ok' : 'bad'}`}>{test.ok ? <Check size={16} /> : <AlertTriangle size={16} />}<span>{test.message}</span><time>{test.latencyMs}ms</time></div>}
@@ -398,68 +392,11 @@ function ProviderEditor(props: {
   );
 }
 
-function SettingsView(props: {
-  snapshot: AppSnapshot;
-  action?: string;
-  hasSuspendedEditor: boolean;
-  onSave(testModel: string): Promise<OperationResult | undefined>;
-  onReturnToProvider(): void;
-}) {
-  const currentModel = props.snapshot.settings.testModel;
-  const modelOptions = useMemo(
-    () => [...new Set([
-      ...TEST_MODEL_PRESETS,
-      ...props.snapshot.profiles.flatMap((profile) => profile.availableModels ?? []),
-    ])],
-    [props.snapshot.profiles],
-  );
-  const [testModel, setTestModel] = useState(currentModel);
-  const isKnownModel = modelOptions.includes(testModel);
-  const dirty = testModel.trim() !== currentModel;
-
-  useEffect(() => setTestModel(currentModel), [currentModel]);
-
-  return (
-    <section className="page settings-page">
-      <header className="page-header compact">
-        <div><h1>系统设置</h1><p>这里的模型只用于供应商验证和 API 模式的初始配置。</p></div>
-        {props.hasSuspendedEditor ? <button className="return-button" onClick={props.onReturnToProvider}><ChevronRight size={16} />返回 API 填写</button> : null}
-      </header>
-
-      <div className="settings-layout">
-        <section className="settings-form" aria-labelledby="test-model-title">
-          <div className="settings-section-heading"><span><Settings2 size={19} /></span><div><h2 id="test-model-title">默认测试模型</h2><p>供应商表单不再要求重复填写模型。</p></div></div>
-          <label htmlFor="test-model-select">选择模型</label>
-          <select
-            id="test-model-select"
-            value={isKnownModel ? testModel : '__custom__'}
-            onChange={(event) => setTestModel(event.target.value === '__custom__' ? '' : event.target.value)}
-          >
-            {modelOptions.map((model) => <option value={model} key={model}>{model}</option>)}
-            <option value="__custom__">自定义模型…</option>
-          </select>
-          {!isKnownModel ? <><label htmlFor="custom-test-model">自定义模型名称</label><input id="custom-test-model" value={testModel} onChange={(event) => setTestModel(event.target.value)} placeholder="输入供应商返回的准确模型 ID" spellCheck={false} autoFocus /></> : null}
-          <div className="settings-preview"><span>当前将使用</span><code>{testModel.trim() || '尚未填写'}</code></div>
-          <div className="settings-actions"><button className="save-settings" disabled={!dirty || !testModel.trim() || Boolean(props.action)} onClick={() => void props.onSave(testModel.trim())}>{props.action === 'save-settings' ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}保存设置</button></div>
-        </section>
-
-        <aside className="settings-explainer">
-          <span className="explainer-icon"><ShieldCheck size={21} /></span>
-          <h2>模型选择如何生效</h2>
-          <ol><li><strong>连接测试</strong><span>用此模型调用供应商的 Responses API。</span></li><li><strong>切换初始值</strong><span>切换 API 模式时写入 Codex 的默认 model。</span></li><li><strong>Codex 内选择</strong><span>进入桌面端后，仍可选择该供应商支持的其他模型。</span></li></ol>
-          <p>修改设置不会直接改写正在运行的 Codex；会在下一次测试或切换时生效。</p>
-          <div className="active-model"><span>当前 Codex 模型</span><code>{props.snapshot.status.model ?? 'Codex 默认'}</code></div>
-        </aside>
-      </div>
-    </section>
-  );
-}
-
 function NavButton(props: { icon: React.ReactNode; active: boolean; onClick(): void; children: React.ReactNode }) { return <button className={props.active ? 'active' : ''} onClick={props.onClick}>{props.icon}<span>{props.children}</span>{props.active && <i />}</button>; }
 function Fact(props: { label: string; value: string; good: boolean }) { return <div><span className={props.good ? 'good' : ''}>{props.good ? <Check size={13} /> : <AlertTriangle size={13} />}</span><div><small>{props.label}</small><strong>{props.value}</strong></div></div>; }
 function ProviderGlyph({ kind }: { kind: ProviderKind }) { const glyphs: Record<ProviderKind, string> = { cockpit: 'CP', sub2api: 'S2', aiclient2api: 'AI', '9routor': '9R', custom: '＋' }; return <span className={`provider-glyph kind-${kind}`}>{glyphs[kind]}</span>; }
 function ActionIcon({ action }: { action: string }) { return <span className="history-icon">{action === 'restore' || action === 'auto-recover' ? <RotateCcw size={16} /> : <ArrowLeftRight size={16} />}</span>; }
-function profileToDraft(profile: PublicProviderProfile): ProviderDraft { return { id: profile.id, kind: profile.kind, name: profile.name, baseUrl: profile.baseUrl, apiKey: '' }; }
+function profileToDraft(profile: PublicProviderProfile): ProviderDraft { return { id: profile.id, kind: profile.kind, name: profile.name, baseUrl: profile.baseUrl, testModel: profile.testModel, apiKey: '' }; }
 function safeHost(value: string) { try { const url = new URL(value); return `${url.host}${url.pathname}`.replace(/\/$/, ''); } catch { return value; } }
 function formatDate(value: string) { return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value)); }
 function relativeTime(value: string) { const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60_000); return minutes < 1 ? '刚刚' : minutes < 60 ? `${minutes} 分钟前` : formatDate(value); }

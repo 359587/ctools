@@ -23,7 +23,7 @@ Editing `~/.codex/config.toml` by hand can introduce typos, leak credentials, or
 - Atomic configuration writes followed by `codex --strict-config doctor --json`.
 - Automatic rollback on failure and startup recovery for interrupted operations.
 - Recovery from the dashboard, history, native menu, or `Shift + Command + R`.
-- A shared test-model setting enriched with models discovered from providers.
+- An independent test model for each provider, enriched with models discovered from that provider.
 
 ## Installation
 
@@ -73,11 +73,10 @@ If macOS only says that the developer cannot be verified, Control-click `CTools.
 ## Usage
 
 1. Install Codex Desktop, complete ChatGPT sign-in at least once, and make sure Codex is in login mode before launching CTools. On first launch, CTools reads the current configuration and captures a recovery baseline.
-2. Confirm the default test model under System Settings. It is used for connection checks and the initial model after switching; it does not prevent choosing another model later in Codex.
-3. Open API Providers, select Add Provider, choose a preset or custom provider, and enter its display name, Base URL, and API key.
-4. Run Test Connection first. After it succeeds, select Save Only or Save and Switch. Codex exits and restarts automatically during a switch.
-5. To return to ChatGPT login mode, select Switch Back to Login Mode on the dashboard.
-6. If a provider or configuration fails, restore the pre-switch configuration from One-click Restore, Switch History, the application menu, or `Shift + Command + R`.
+2. Open API Providers, select Add Provider, choose a preset or custom provider, and enter its display name, Base URL, test model, and API key. A model is prefilled for the provider type; you can also choose a model returned by the provider or enter a custom model ID.
+3. Run Test Connection first. After it succeeds, select Save Only or Save and Switch. Codex exits and restarts automatically during a switch.
+4. To return to ChatGPT login mode, select Switch Back to Login Mode on the dashboard.
+5. If a provider or configuration fails, restore the pre-switch configuration from One-click Restore, Switch History, the application menu, or `Shift + Command + R`.
 
 API keys stay in macOS Keychain. Do not force-quit CTools during a switch. If an operation is interrupted, the next launch attempts to recover the unfinished transaction.
 

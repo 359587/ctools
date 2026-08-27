@@ -1,12 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { DEFAULT_TEST_MODEL } from '../shared/constants';
-import type { AppSettings, PersistedState, ProviderProfile } from '../shared/types';
+import { defaultTestModelForKind } from '../shared/constants';
+import type { PersistedState, ProviderProfile } from '../shared/types';
 import { atomicWriteFile } from './atomic-file';
 
 const defaultState = (): PersistedState => ({
   schemaVersion: 1,
-  settings: { testModel: DEFAULT_TEST_MODEL },
   profiles: [],
   backups: [],
   history: [],
@@ -21,21 +20,27 @@ export class StateStore {
     try {
       const data = JSON.parse(await readFile(this.filePath, 'utf8')) as Omit<
         PersistedState,
-        'settings' | 'profiles'
+        'profiles'
       > & {
-        settings?: AppSettings;
-        profiles: Array<ProviderProfile & { model?: string }>;
+        settings?: { testModel?: string };
+        profiles: Array<Omit<ProviderProfile, 'testModel'> & { testModel?: string; model?: string }>;
       };
       if (data.schemaVersion !== 1 || !Array.isArray(data.profiles) || !Array.isArray(data.backups)) {
         throw new Error('Unsupported state schema');
       }
-      const legacyModel = data.profiles.find((profile) => profile.model?.trim())?.model?.trim();
       const configuredModel = data.settings?.testModel?.trim();
-      const needsMigration = !configuredModel || data.profiles.some((profile) => 'model' in profile);
+      const needsMigration = Boolean(data.settings)
+        || data.profiles.some((profile) => !profile.testModel?.trim() || 'model' in profile);
+      const { settings: _legacySettings, ...stateWithoutSettings } = data;
       const migratedState: PersistedState = {
-        ...data,
-        settings: { testModel: configuredModel || legacyModel || DEFAULT_TEST_MODEL },
-        profiles: data.profiles.map(({ model: _legacyModel, ...profile }) => profile),
+        ...stateWithoutSettings,
+        profiles: data.profiles.map(({ model: legacyModel, ...profile }) => ({
+          ...profile,
+          testModel: profile.testModel?.trim()
+            || legacyModel?.trim()
+            || configuredModel
+            || defaultTestModelForKind(profile.kind),
+        })),
       };
       this.state = migratedState;
       if (needsMigration) {

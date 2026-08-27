@@ -17,6 +17,7 @@ const draftSchema = z.object({
   kind: z.enum(providerKinds),
   name: z.string().trim().min(1).max(80),
   baseUrl: z.string().trim().min(1).max(2048),
+  testModel: z.string().trim().min(1).max(160),
   apiKey: z.string().max(4096).optional(),
 });
 
@@ -28,6 +29,7 @@ export class ProviderService {
   async save(draftInput: ProviderDraft, state: PersistedState): Promise<ProviderProfile> {
     const draft = draftSchema.parse(draftInput);
     const normalizedUrl = normalizeBaseUrl(draft.baseUrl);
+    const testModel = testModelSchema.parse(draft.testModel);
     const existing = draft.id ? state.profiles.find((profile) => profile.id === draft.id) : undefined;
     if (draft.id && !existing) throw new AppError('供应商不存在', 'PROVIDER_NOT_FOUND');
     if (!existing && !draft.apiKey?.trim()) throw new AppError('首次保存必须填写 API Key', 'KEY_REQUIRED');
@@ -43,6 +45,7 @@ export class ProviderService {
       kind: draft.kind,
       name: draft.name.trim(),
       baseUrl: normalizedUrl,
+      testModel,
       secretId,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
@@ -53,8 +56,8 @@ export class ProviderService {
     };
   }
 
-  async test(profile: ProviderProfile, testModelInput: string): Promise<TestProviderResult> {
-    const testModel = testModelSchema.parse(testModelInput);
+  async test(profile: ProviderProfile): Promise<TestProviderResult> {
+    const testModel = testModelSchema.parse(profile.testModel);
     const key = await this.helper.getSecret(KEYCHAIN_SERVICE, profile.secretId);
     return testEndpoint(profile.baseUrl, testModel, key);
   }
@@ -62,10 +65,9 @@ export class ProviderService {
   async testDraft(
     draftInput: ProviderDraft,
     state: PersistedState,
-    testModelInput: string,
   ): Promise<TestProviderResult> {
     const draft = draftSchema.parse(draftInput);
-    const testModel = testModelSchema.parse(testModelInput);
+    const testModel = testModelSchema.parse(draft.testModel);
     const existing = draft.id ? state.profiles.find((profile) => profile.id === draft.id) : undefined;
     const key = draft.apiKey?.trim()
       ? draft.apiKey.trim()
